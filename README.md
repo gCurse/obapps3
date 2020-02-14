@@ -1,5 +1,5 @@
 # obapps3
-#### [OBApps](https://sourceforge.net/projects/obapps) (by Eric Bohlman) 2to3ed, works with Python3, wxPython3+
+#### [OBApps](https://sourceforge.net/projects/obapps) (by Eric Bohlman) 2to3ed, works with Python3, wxPython4
 
 ### A graphical editor for Openbox application settings.
     
@@ -8,7 +8,7 @@
 * sudo python setup.py install, or just put obapps somewhere on your path and make sure it's executable
 
 #### Requires:
-* Python3, wxPython (3+), python-xlib
+* Python3, wxPython4, python-xlib
 
 #### Usage notes:
 * OBApps uses ~/.config/openbox/rc.xml (or the config-file Openbox was started with) by default. You can specify another file as an argument, e.g. obapps.py .config/openbox/myrc.xml
