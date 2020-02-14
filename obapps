@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #  obapps
 #
-#  Openbox Application Settings Editor 0.1.7 alpha
+#  Openbox Application Settings Editor
 license='''
 Copyright (c) 2010 Eric Bohlman
 

@@ -1,3 +1,6 @@
+#### 0.2.1 (2020-02-14):
+* Fix python shebang (duh!)
+
 #### 0.2.0 (2020-02-13):
 * Code converted to Python3 (2to3).
 * Fixed wxPyDeprecationWarnings
