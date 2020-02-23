@@ -114,7 +114,7 @@ class OBappsel(wx.Panel):
         return index
         
     def pick(self,evt):
-        self.SetCursor(wx.StockCursor(wx.CURSOR_CROSS))
+        self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
         self.CaptureMouse()
         self.Bind(wx.EVT_LEFT_DOWN,self.onPicked)
         
@@ -203,6 +203,11 @@ class SettingsPanel(wx.Panel):
             ('Maximize',('Vertical','Horizontal','Both','No','NA'),'maximized'),
             ('Layer',('Normal','Above','Below','NA'),'layer'),
         ))
+        self._makeradioboxes(vbox,(
+            (('Skip pager',('Yes','No','NA'),'skip_pager'),
+             ('Skip taskbar',('Yes','No','NA'),'skip_taskbar'),
+            ),
+        ))
         sb=wx.StaticBox(self,-1,'Position')
         sbs=wx.StaticBoxSizer(sb,wx.HORIZONTAL)
         self.posx=self._addtext(sbs,'X: ',50,'Position or "center"')
@@ -210,20 +215,16 @@ class SettingsPanel(wx.Panel):
         self.posmon=self._addtext(sbs,'Monitor: ',25,'')
         self.force=wx.CheckBox(self,-1,'Force')
         self.Bind(wx.EVT_CHECKBOX,self.onChanged,self.force)
-        sbs.Add(self.force,0,wx.ALIGN_CENTER_VERTICAL)
+        sbs.Add(self.force,0,wx.ALIGN_CENTER_HORIZONTAL)
         vbox.Add(sbs,1,wx.ALL,5)
         hbox1=wx.BoxSizer(wx.HORIZONTAL)
         self.desktop=self._addtext(hbox1,'Desktop: ',25,'1 is first, "all" for all desktops',
-            wx.ALIGN_CENTER_VERTICAL|wx.ALL,5)
+                                   wx.ALIGN_CENTER_HORIZONTAL|wx.ALL,5)
         vbox.Add(hbox1,0,wx.ALL,0)
-        self._makeradioboxes(vbox,(
-            (('Skip pager',('Yes','No','NA'),'skip_pager'),
-             ('Skip taskbar',('Yes','No','NA'),'skip_taskbar'),
-            ),
-        ))
+        
         self.SetSizer(vbox)
         
-    def _addtext(self,sizer,label,width,tip,style=wx.ALIGN_CENTER_VERTICAL,padding=0):
+    def _addtext(self,sizer,label,width,tip,style=wx.ALIGN_CENTER_HORIZONTAL,padding=0):
         sizer.Add(wx.StaticText(self,-1,label,),0,style,padding)
         text=wx.TextCtrl(self,-1,'',size=(width,-1))
         if tip:
