@@ -5,6 +5,7 @@
 #  Openbox Application Settings Editor
 license='''
 Copyright (c) 2010 Eric Bohlman
+Copyright (c) 2020 gcurse (github.com/gCurse)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -27,9 +28,11 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 '''
+version = '0.2.2'
 
 import obaxutils
 import wx
+import wx.adv
 import wx.lib.mixins.listctrl as mix
 import sys
 from xml.dom.minidom import parse
@@ -53,7 +56,7 @@ class OBappsel(wx.Panel):
         vbox=wx.BoxSizer(wx.VERTICAL)
         self.list=list=self.AWListCtrl(self,-1,
             style=wx.LC_REPORT|wx.LC_SINGLE_SEL|wx.LC_VRULES|wx.VSCROLL|wx.HSCROLL)
-        for col,text in enumerate((('Name',150),('Class',100),('Role',100),('Type',80))):
+        for col,text in enumerate((('Name',150),('Class',150),('Role',150),('Type',80))):
             list.InsertColumn(col,text[0],width=text[1])
         if self.showtitle:
             list.InsertColumn(4,'Title',100)
@@ -203,34 +206,37 @@ class SettingsPanel(wx.Panel):
             ('Maximize',('Vertical','Horizontal','Both','No','NA'),'maximized'),
             ('Layer',('Normal','Above','Below','NA'),'layer'),
         ))
+        
+        sb=wx.StaticBox(self,-1,'Position')
+        sbs=wx.StaticBoxSizer(sb,wx.HORIZONTAL)
+        self.posx=self._addtext(sbs,'X: ',75,'Position or "center"')
+        self.posy=self._addtext(sbs,'Y: ',75,'Position or "center"')
+        self.posmon=self._addtext(sbs,'Monitor: ',25,'')
+        self.force=wx.CheckBox(self,-1,'Force')
+        self.Bind(wx.EVT_CHECKBOX,self.onChanged,self.force)
+        sbs.Add(self.force,0,wx.ALL|wx.CENTER)
+        vbox.Add(sbs,0,wx.ALL,5)
+        
+        sb1=wx.StaticBox(self,-1,'')
+        sbs1=wx.StaticBoxSizer(sb1,wx.HORIZONTAL)
+        self.desktop=self._addtext(sbs1,'Desktop: ',30,'1 is first, "all" for all desktops')
+        vbox.Add(sbs1,0,wx.ALL,5)
+
         self._makeradioboxes(vbox,(
             (('Skip pager',('Yes','No','NA'),'skip_pager'),
              ('Skip taskbar',('Yes','No','NA'),'skip_taskbar'),
             ),
         ))
-        sb=wx.StaticBox(self,-1,'Position')
-        sbs=wx.StaticBoxSizer(sb,wx.HORIZONTAL)
-        self.posx=self._addtext(sbs,'X: ',50,'Position or "center"')
-        self.posy=self._addtext(sbs,'Y: ',50,'Position or "center"')
-        self.posmon=self._addtext(sbs,'Monitor: ',25,'')
-        self.force=wx.CheckBox(self,-1,'Force')
-        self.Bind(wx.EVT_CHECKBOX,self.onChanged,self.force)
-        sbs.Add(self.force,0,wx.ALIGN_CENTER_HORIZONTAL)
-        vbox.Add(sbs,1,wx.ALL,5)
-        hbox1=wx.BoxSizer(wx.HORIZONTAL)
-        self.desktop=self._addtext(hbox1,'Desktop: ',25,'1 is first, "all" for all desktops',
-                                   wx.ALIGN_CENTER_HORIZONTAL|wx.ALL,5)
-        vbox.Add(hbox1,0,wx.ALL,0)
-        
+        vbox.AddStretchSpacer()
         self.SetSizer(vbox)
         
-    def _addtext(self,sizer,label,width,tip,style=wx.ALIGN_CENTER_HORIZONTAL,padding=0):
+    def _addtext(self,sizer,label,width,tip,style=wx.ALL|wx.CENTER,padding=0):
         sizer.Add(wx.StaticText(self,-1,label,),0,style,padding)
         text=wx.TextCtrl(self,-1,'',size=(width,-1))
         if tip:
             text.SetToolTip(tip)
         self.Bind(wx.EVT_TEXT,self.onChanged,text)
-        sizer.Add(text,0,wx.RIGHT,5)
+        sizer.Add(text,0,style,5)
         return text
         
     def _makeradioboxes(self,sizer,items):
@@ -240,7 +246,7 @@ class SettingsPanel(wx.Panel):
                 self._makeradioboxes(hbox,item)
                 sizer.Add(hbox,0)
             else:
-                rb=wx.RadioBox(self,-1,item[0],choices=item[1],majorDimension=4)
+                rb=wx.RadioBox(self,-1,item[0],choices=item[1],majorDimension=5)
                 self.rbs[item[2]]=rb
                 self.Bind(wx.EVT_RADIOBOX,self.onChanged,rb)
                 hbox.Add(rb,0,wx.ALL,0)
@@ -381,7 +387,7 @@ class OBAppsModel():
         try:
             f=open(self.path,'w')
         except IOError as ex:
-            wx.MessageBox('Cannot save '+self.path+': '+str(ex),"OBApps",wx.OK|wx.ICON_ERROR)
+            wx.MessageBox('Cannot save '+self.path+': '+str(ex),"OBApps3",wx.OK|wx.ICON_ERROR)
             return
         self.dom.writexml(f)
         f.close()
@@ -454,15 +460,16 @@ class WLFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON,self.onClose,id=wx.ID_CLOSE)
         
     def onAbout(self,evt):
-        info=wx.AboutDialogInfo()
-        info.SetName('OBApps')
-        info.SetVersion('0.1.7')
+        info=wx.adv.AboutDialogInfo()
+        info.SetName('OBApps3')
+        info.SetVersion(version)
         info.SetDescription('Openbox Application Settings Editor (alpha)')
-        info.SetCopyright('(C) 2010 Eric Bohlman')
+        info.SetCopyright('(C) 2010 Eric Bohlman\n'
+                          '(C) 2020 gcurse (github.com/gCurse)')
         info.AddDeveloper('Eric Bohlman <ericbohlman@gmail.com>')
         info.SetLicense(license)
-        info.WebSite=('http://obapps.sourceforge.net','OBApps home page')
-        wx.AboutBox(info)
+        info.WebSite=('https://github.com/gCurse/obapps3','OBApps3 home page')
+        wx.adv.AboutBox(info)
         
     def onApply(self,evt):
         self.model.Save()
@@ -473,7 +480,7 @@ class WLFrame(wx.Frame):
         
 def main():
     app=wx.App()
-    frame=WLFrame(None,-1,'OBApps')
+    frame=WLFrame(None,-1,'OBApps3')
     frame.Show()
     app.MainLoop()
         
