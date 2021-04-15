@@ -1,3 +1,10 @@
+#### 0.2.3 (2021-04-15):
+* Fixes #2: OBApps fails to launch if there is no application tag in the applications-section of rc.xml
+
+#### 0.2.2 (2020-02-24)
+* First try on fixing GUI
+* Fix GUI and AboutDialog, bump version to 0.2.2
+
 #### 0.2.1 (2020-02-14):
 * Fix python shebang (duh!)
 

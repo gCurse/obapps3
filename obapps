@@ -3,7 +3,7 @@
 #  obapps
 #
 #  Openbox Application Settings Editor
-license='''
+license = """
 Copyright (c) 2010 Eric Bohlman
 Copyright (c) 2020 gcurse (github.com/gCurse)
 
@@ -27,8 +27,8 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
-'''
-version = '0.2.2'
+"""
+version = "0.2.3"
 
 import obaxutils
 import wx
@@ -38,451 +38,482 @@ import sys
 from xml.dom.minidom import parse
 from xml.dom import Node
 
+
 class OBappsel(wx.Panel):
-    class AWListCtrl(wx.ListCtrl,mix.TextEditMixin):
-        def __init__(self,*args,**kwargs):
-            wx.ListCtrl.__init__(self,*args,**kwargs)
+    class AWListCtrl(wx.ListCtrl, mix.TextEditMixin):
+        def __init__(self, *args, **kwargs):
+            wx.ListCtrl.__init__(self, *args, **kwargs)
             mix.TextEditMixin.__init__(self)
-            
-    def __init__(self,*args,**kwargs):
-        self.showtitle=kwargs.pop('showtitle',False)
-        self.model=None
-        self.notify=None
-        self.inhibit_onselected=False
-        self.modelkeys=['name','class','role','type']
+
+    def __init__(self, *args, **kwargs):
+        self.showtitle = kwargs.pop("showtitle", False)
+        self.model = None
+        self.notify = None
+        self.inhibit_onselected = False
+        self.modelkeys = ["name", "class", "role", "type"]
         if self.showtitle:
-            self.modelkeys.append('title');
-        wx.Panel.__init__(self,*args,**kwargs)
-        vbox=wx.BoxSizer(wx.VERTICAL)
-        self.list=list=self.AWListCtrl(self,-1,
-            style=wx.LC_REPORT|wx.LC_SINGLE_SEL|wx.LC_VRULES|wx.VSCROLL|wx.HSCROLL)
-        for col,text in enumerate((('Name',150),('Class',150),('Role',150),('Type',80))):
-            list.InsertColumn(col,text[0],width=text[1])
+            self.modelkeys.append("title")
+        wx.Panel.__init__(self, *args, **kwargs)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        self.list = list = self.AWListCtrl(
+            self, -1, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_VRULES | wx.VSCROLL | wx.HSCROLL
+        )
+        for col, text in enumerate((("Name", 150), ("Class", 150), ("Role", 150), ("Type", 80))):
+            list.InsertColumn(col, text[0], width=text[1])
         if self.showtitle:
-            list.InsertColumn(4,'Title',100)
-        vbox.Add(list,1,wx.EXPAND)
-        hbox=self._makebuttons((
-            (wx.ID_ADD,self.new),
-            (wx.ID_FIND,self.pick,'Click on a window to set selected item\'s name/class/role/type'),
-            (wx.ID_UP,self.up),
-            (wx.ID_DOWN,self.down),
-            (wx.ID_DELETE,self.delete),
-        ))    
-        vbox.Add(hbox,0,wx.ALIGN_CENTER)
+            list.InsertColumn(4, "Title", 100)
+        vbox.Add(list, 1, wx.EXPAND)
+        hbox = self._makebuttons(
+            (
+                (wx.ID_ADD, self.new),
+                (wx.ID_FIND, self.pick, "Click on a window to set selected item's name/class/role/type"),
+                (wx.ID_UP, self.up),
+                (wx.ID_DOWN, self.down),
+                (wx.ID_DELETE, self.delete),
+            )
+        )
+        vbox.Add(hbox, 0, wx.ALIGN_CENTER)
         self.SetSizer(vbox)
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED,self.onSelected,list)
-        self.Bind(wx.EVT_LIST_END_LABEL_EDIT,self.onEdited,list)
-        
-    def SetNotify(self,func):
-        self.notify=func
-        
-    def SetModel(self,model):
-        self.model=model
-        self.inhibit_onselected=True
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onSelected, list)
+        self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.onEdited, list)
+
+    def SetNotify(self, func):
+        self.notify = func
+
+    def SetModel(self, model):
+        self.model = model
+        self.inhibit_onselected = True
         self.list.DeleteAllItems()
         for item in self.model.Items():
-            index=self.list.InsertItem(sys.maxsize,'')
+            index = self.list.InsertItem(sys.maxsize, "")
             self.model.SetCurrent(index)
-            for col,val in enumerate(self.modelkeys):
-                self.list.SetItem(index,col,self.model.Get(val))
-        self.inhibit_onselected=False
+            for col, val in enumerate(self.modelkeys):
+                self.list.SetItem(index, col, self.model.Get(val))
+        self.inhibit_onselected = False
         self.set_sel_and_focus(0)
 
-    def _makebuttons(self,btnlist):
-        hbox=wx.BoxSizer(wx.HORIZONTAL)
+    def _makebuttons(self, btnlist):
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
         for item in btnlist:
-            label,binding=item[:2]
-            id=-1
-            if isinstance(label,int):
-                id=label
-                label=''
-            btn=wx.Button(self,id,label,style=wx.BU_EXACTFIT&0)
-            self.Bind(wx.EVT_BUTTON,binding,btn)
-            if len(item)==3:
+            label, binding = item[:2]
+            id = -1
+            if isinstance(label, int):
+                id = label
+                label = ""
+            btn = wx.Button(self, id, label, style=wx.BU_EXACTFIT & 0)
+            self.Bind(wx.EVT_BUTTON, binding, btn)
+            if len(item) == 3:
                 btn.SetToolTip(item[2])
-            hbox.Add(btn,0,wx.EXPAND|wx.ALIGN_CENTER,wx.ALL,5)
+            hbox.Add(btn, 0, wx.EXPAND | wx.ALIGN_CENTER, wx.ALL, 5)
         return hbox
-        
-    def onSelected(self,evt):
+
+    def onSelected(self, evt):
         if not self.inhibit_onselected:
             self.do_notify()
-        
-    def onEdited(self,evt):
+
+    def onEdited(self, evt):
         wx.CallAfter(self.set_model_values)
-        
-    def new(self,evt):
-        index=self.list.InsertItem(sys.maxsize,'')
+
+    def new(self, evt):
+        index = self.list.InsertItem(sys.maxsize, "")
         self.model.Append()
         self.set_sel_and_focus(index)
         return index
-        
-    def pick(self,evt):
+
+    def pick(self, evt):
         self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
         self.CaptureMouse()
-        self.Bind(wx.EVT_LEFT_DOWN,self.onPicked)
-        
-    def onPicked(self,evt):
+        self.Bind(wx.EVT_LEFT_DOWN, self.onPicked)
+
+    def onPicked(self, evt):
         self.ReleaseMouse()
         self.SetCursor(wx.NullCursor)
         self.Unbind(wx.EVT_LEFT_DOWN)
-        info=obaxutils.get_window_info(('_OB_APP_NAME','_OB_APP_CLASS','_OB_APP_ROLE','_OB_APP_TYPE','_NET_WM_NAME'))
+        info = obaxutils.get_window_info(
+            ("_OB_APP_NAME", "_OB_APP_CLASS", "_OB_APP_ROLE", "_OB_APP_TYPE", "_NET_WM_NAME")
+        )
         if info is not None:
-            sel=self.getsel()
+            sel = self.getsel()
             if sel is None:
-                sel=self.new(-1)
-            for col,val in enumerate(info[:4]):
-                    self.list.SetItem(sel,col,val)
+                sel = self.new(-1)
+            for col, val in enumerate(info[:4]):
+                self.list.SetItem(sel, col, val)
             if self.showtitle:
-                self.list.SetItem(sel,4,info[4])
+                self.list.SetItem(sel, 4, info[4])
             self.set_model_values()
             self.set_sel_and_focus(sel)
-        
-    def up(self,evt):
+
+    def up(self, evt):
         self.moveitem(-1)
-        
-    def down(self,evt):
+
+    def down(self, evt):
         self.moveitem(1)
-        
-    def delete(self,evt):
-        sel=self.getsel()
+
+    def delete(self, evt):
+        sel = self.getsel()
         if sel is not None:
             self.list.DeleteItem(sel)
             self.model.Delete(sel)
-            if sel>=self.list.GetItemCount():
-                sel-=1
+            if sel >= self.list.GetItemCount():
+                sel -= 1
             self.set_sel_and_focus(sel)
-                
+
     def getsel(self):
         for i in range(self.list.GetItemCount()):
             if self.list.IsSelected(i):
                 return i
         return None
-        
-    def set_sel_and_focus(self,index):
-        self.list.Select(index,True)
-        self.list.Focus(index)
-        self.list.SetFocus()
-        self.do_notify()
-        
-    def set_model_values(self):    
-        sel=self.getsel()
+
+    def set_sel_and_focus(self, index):
+        try:
+            self.list.Select(index, True)
+            self.list.Focus(index)
+            self.list.SetFocus()
+            self.do_notify()
+        except wx._core.wxAssertionError:
+            print("No application entry in xml file")
+
+    def set_model_values(self):
+        sel = self.getsel()
         self.model.SetCurrent(sel)
-        for i,name in enumerate(self.modelkeys):
-            self.model.Set(name,self.list.GetItem(sel,i).GetText())
+        for i, name in enumerate(self.modelkeys):
+            self.model.Set(name, self.list.GetItem(sel, i).GetText())
         self.do_notify()
-        
-    def moveitem(self,incr):
-        oldindex=index=self.getsel()
-        if index is not None and ((incr>0 and index<self.list.GetItemCount()-1) or (incr<0 and index>0)):
-            items=[self.list.GetItem(index,col) for col in range(self.list.GetColumnCount())]
-            self.inhibit_onselected=True
+
+    def moveitem(self, incr):
+        oldindex = index = self.getsel()
+        if index is not None and ((incr > 0 and index < self.list.GetItemCount() - 1) or (incr < 0 and index > 0)):
+            items = [self.list.GetItem(index, col) for col in range(self.list.GetColumnCount())]
+            self.inhibit_onselected = True
             self.list.DeleteItem(index)
-            index=self.list.InsertItem(index+incr,'')
+            index = self.list.InsertItem(index + incr, "")
             for item in items:
                 item.SetId(index)
                 self.list.SetItem(item)
-            self.model.Move(oldindex,index)
-            self.inhibit_onselected=False
+            self.model.Move(oldindex, index)
+            self.inhibit_onselected = False
         self.set_sel_and_focus(index)
 
     def do_notify(self):
         if self.notify is not None:
             self.model.SetCurrent(self.getsel())
             self.notify(self.model)
-        
-class SettingsPanel(wx.Panel):
-    def __init__(self,*args,**kwargs):
-        wx.Panel.__init__(self,*args,**kwargs)
-        self.rbs={}
-        vbox=wx.BoxSizer(wx.VERTICAL)
-        self._makeradioboxes(vbox,(
-            (('Focus',('Yes','No','NA'),'focus'),
-             ('Decorate',('Yes','No','NA'),'decor'),
-            ),
-            (('Iconize',('Yes','No','NA'),'iconic'),
-             ('Shade',('Yes','No','NA'),'shade'),
-            ),
-            ('Fullscreen',('Yes','No','NA'),'fullscreen'),
-            ('Maximize',('Vertical','Horizontal','Both','No','NA'),'maximized'),
-            ('Layer',('Normal','Above','Below','NA'),'layer'),
-        ))
-        
-        sb=wx.StaticBox(self,-1,'Position')
-        sbs=wx.StaticBoxSizer(sb,wx.HORIZONTAL)
-        self.posx=self._addtext(sbs,'X: ',75,'Position or "center"')
-        self.posy=self._addtext(sbs,'Y: ',75,'Position or "center"')
-        self.posmon=self._addtext(sbs,'Monitor: ',25,'')
-        self.force=wx.CheckBox(self,-1,'Force')
-        self.Bind(wx.EVT_CHECKBOX,self.onChanged,self.force)
-        sbs.Add(self.force,0,wx.ALL|wx.CENTER)
-        vbox.Add(sbs,0,wx.ALL,5)
-        
-        sb1=wx.StaticBox(self,-1,'')
-        sbs1=wx.StaticBoxSizer(sb1,wx.HORIZONTAL)
-        self.desktop=self._addtext(sbs1,'Desktop: ',30,'1 is first, "all" for all desktops')
-        vbox.Add(sbs1,0,wx.ALL,5)
 
-        self._makeradioboxes(vbox,(
-            (('Skip pager',('Yes','No','NA'),'skip_pager'),
-             ('Skip taskbar',('Yes','No','NA'),'skip_taskbar'),
+
+class SettingsPanel(wx.Panel):
+    def __init__(self, *args, **kwargs):
+        wx.Panel.__init__(self, *args, **kwargs)
+        self.rbs = {}
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        self._makeradioboxes(
+            vbox,
+            (
+                (
+                    ("Focus", ("Yes", "No", "NA"), "focus"),
+                    ("Decorate", ("Yes", "No", "NA"), "decor"),
+                ),
+                (
+                    ("Iconize", ("Yes", "No", "NA"), "iconic"),
+                    ("Shade", ("Yes", "No", "NA"), "shade"),
+                ),
+                ("Fullscreen", ("Yes", "No", "NA"), "fullscreen"),
+                ("Maximize", ("Vertical", "Horizontal", "Both", "No", "NA"), "maximized"),
+                ("Layer", ("Normal", "Above", "Below", "NA"), "layer"),
             ),
-        ))
+        )
+
+        sb = wx.StaticBox(self, -1, "Position")
+        sbs = wx.StaticBoxSizer(sb, wx.HORIZONTAL)
+        self.posx = self._addtext(sbs, "X: ", 75, 'Position or "center"')
+        self.posy = self._addtext(sbs, "Y: ", 75, 'Position or "center"')
+        self.posmon = self._addtext(sbs, "Monitor: ", 25, "")
+        self.force = wx.CheckBox(self, -1, "Force")
+        self.Bind(wx.EVT_CHECKBOX, self.onChanged, self.force)
+        sbs.Add(self.force, 0, wx.ALL | wx.CENTER)
+        vbox.Add(sbs, 0, wx.ALL, 5)
+
+        sb1 = wx.StaticBox(self, -1, "")
+        sbs1 = wx.StaticBoxSizer(sb1, wx.HORIZONTAL)
+        self.desktop = self._addtext(sbs1, "Desktop: ", 30, '1 is first, "all" for all desktops')
+        vbox.Add(sbs1, 0, wx.ALL, 5)
+
+        self._makeradioboxes(
+            vbox,
+            (
+                (
+                    ("Skip pager", ("Yes", "No", "NA"), "skip_pager"),
+                    ("Skip taskbar", ("Yes", "No", "NA"), "skip_taskbar"),
+                ),
+            ),
+        )
         vbox.AddStretchSpacer()
         self.SetSizer(vbox)
-        
-    def _addtext(self,sizer,label,width,tip,style=wx.ALL|wx.CENTER,padding=0):
-        sizer.Add(wx.StaticText(self,-1,label,),0,style,padding)
-        text=wx.TextCtrl(self,-1,'',size=(width,-1))
+
+    def _addtext(self, sizer, label, width, tip, style=wx.ALL | wx.CENTER, padding=0):
+        sizer.Add(
+            wx.StaticText(
+                self,
+                -1,
+                label,
+            ),
+            0,
+            style,
+            padding,
+        )
+        text = wx.TextCtrl(self, -1, "", size=(width, -1))
         if tip:
             text.SetToolTip(tip)
-        self.Bind(wx.EVT_TEXT,self.onChanged,text)
-        sizer.Add(text,0,style,5)
+        self.Bind(wx.EVT_TEXT, self.onChanged, text)
+        sizer.Add(text, 0, style, 5)
         return text
-        
-    def _makeradioboxes(self,sizer,items):
+
+    def _makeradioboxes(self, sizer, items):
         for item in items:
-            hbox=wx.BoxSizer(wx.HORIZONTAL)
-            if isinstance(item[0],tuple):
-                self._makeradioboxes(hbox,item)
-                sizer.Add(hbox,0)
+            hbox = wx.BoxSizer(wx.HORIZONTAL)
+            if isinstance(item[0], tuple):
+                self._makeradioboxes(hbox, item)
+                sizer.Add(hbox, 0)
             else:
-                rb=wx.RadioBox(self,-1,item[0],choices=item[1],majorDimension=5)
-                self.rbs[item[2]]=rb
-                self.Bind(wx.EVT_RADIOBOX,self.onChanged,rb)
-                hbox.Add(rb,0,wx.ALL,0)
-                sizer.Add(hbox,0,wx.LEFT|wx.RIGHT,5)
-            
-    def onChanged(self,event):
+                rb = wx.RadioBox(self, -1, item[0], choices=item[1], majorDimension=5)
+                self.rbs[item[2]] = rb
+                self.Bind(wx.EVT_RADIOBOX, self.onChanged, rb)
+                hbox.Add(rb, 0, wx.ALL, 0)
+                sizer.Add(hbox, 0, wx.LEFT | wx.RIGHT, 5)
+
+    def onChanged(self, event):
         if self.inhibit_onchanged:
             return
-        self.settings.Set('x',self.posx.GetValue())
-        self.settings.Set('y',self.posy.GetValue())
-        self.settings.Set('monitor',self.posmon.GetValue())
-        self.settings.Set('force',self.force.GetValue())
-        self.settings.Set('desktop',self.desktop.GetValue())
-        for key,rb in list(self.rbs.items()):
-            self.settings.Set(key,rb.GetStringSelection().lower())
-        
-    def new_settings(self,model):
-        self.settings=model
-        self.inhibit_onchanged=True
-        self.posx.SetValue(model.Get('x'))
-        self.posy.SetValue(model.Get('y'))
-        self.posmon.SetValue(model.Get('monitor'))
-        self.force.SetValue(model.Get('force'))
-        self.desktop.SetValue(model.Get('desktop'))
-        for key,rb in list(self.rbs.items()):
-            rb.SetStringSelection(model.Get(key) or 'NA')
-        self.inhibit_onchanged=False
-        
-class OBAppsModel():
-    def __init__(self,path,fileobj):
-        self.path=path
-        self.dom=parse(fileobj)
-        t=self.dom.getElementsByTagName('applications')
+        self.settings.Set("x", self.posx.GetValue())
+        self.settings.Set("y", self.posy.GetValue())
+        self.settings.Set("monitor", self.posmon.GetValue())
+        self.settings.Set("force", self.force.GetValue())
+        self.settings.Set("desktop", self.desktop.GetValue())
+        for key, rb in list(self.rbs.items()):
+            self.settings.Set(key, rb.GetStringSelection().lower())
+
+    def new_settings(self, model):
+        self.settings = model
+        self.inhibit_onchanged = True
+        self.posx.SetValue(model.Get("x"))
+        self.posy.SetValue(model.Get("y"))
+        self.posmon.SetValue(model.Get("monitor"))
+        self.force.SetValue(model.Get("force"))
+        self.desktop.SetValue(model.Get("desktop"))
+        for key, rb in list(self.rbs.items()):
+            rb.SetStringSelection(model.Get(key) or "NA")
+        self.inhibit_onchanged = False
+
+
+class OBAppsModel:
+    def __init__(self, path, fileobj):
+        self.path = path
+        self.dom = parse(fileobj)
+        t = self.dom.getElementsByTagName("applications")
         if len(t):
-            self.parent=t[0]
+            self.parent = t[0]
         else:
-            self.parent=self.dom.createElement('applications')
+            self.parent = self.dom.createElement("applications")
             self.dom.documentElement.appendChild(self.parent)
-        self.apps=self.parent.getElementsByTagName('application')
-        self.current_item=None
-        
+        self.apps = self.parent.getElementsByTagName("application")
+        self.current_item = None
+
     def Items(self):
         return list(range(len(self.apps)))
-    
+
     def Append(self):
-        self.parent.appendChild(self.dom.createElement('application'))
-        self.parent.appendChild(self.dom.createTextNode('\n'))
-        self.apps=self.parent.getElementsByTagName('application')
-        
-    def Delete(self,index):
+        self.parent.appendChild(self.dom.createElement("application"))
+        self.parent.appendChild(self.dom.createTextNode("\n"))
+        self.apps = self.parent.getElementsByTagName("application")
+
+    def Delete(self, index):
         self.parent.removeChild(self.apps[index])
-        self.apps=self.parent.getElementsByTagName('application')
-        
-    def Get(self,key):
+        self.apps = self.parent.getElementsByTagName("application")
+
+    def Get(self, key):
         if self.current_item is None:
-            if key=='force':
+            if key == "force":
                 return False
-            return ''
-        xltab={'True':'Yes','False':'No','Default':'NA'}
-        if key in ('name','class','role','type','title'):
+            return ""
+        xltab = {"True": "Yes", "False": "No", "Default": "NA"}
+        if key in ("name", "class", "role", "type", "title"):
             if self.app.hasAttribute(key):
-                val=self.app.getAttribute(key)
-                if val=='':
-                    val='""'
+                val = self.app.getAttribute(key)
+                if val == "":
+                    val = '""'
             else:
-                val=''
-        elif key in ('x','y','monitor'):
-            val=''
-            t=self.app.getElementsByTagName('position')
+                val = ""
+        elif key in ("x", "y", "monitor"):
+            val = ""
+            t = self.app.getElementsByTagName("position")
             if len(t):
-                val=self._get_one(key,parent=t[0])
-            if val=='default':
-                val=''
-        elif key=='force':
-            val=False
-            t=self.app.getElementsByTagName('position')
+                val = self._get_one(key, parent=t[0])
+            if val == "default":
+                val = ""
+        elif key == "force":
+            val = False
+            t = self.app.getElementsByTagName("position")
             if len(t):
-                res=t[0].getAttribute('force')
-                val=res.lower() in ('true','yes')
+                res = t[0].getAttribute("force")
+                val = res.lower() in ("true", "yes")
         else:
-            val=self._get_one(key)
-            val=val.capitalize()
-            val=xltab.get(val,val)
-            if key=='maximized' and val=='Yes':
-                val='Both'
-            if key=='desktop' and val=='NA':
-                val=''
+            val = self._get_one(key)
+            val = val.capitalize()
+            val = xltab.get(val, val)
+            if key == "maximized" and val == "Yes":
+                val = "Both"
+            if key == "desktop" and val == "NA":
+                val = ""
         return val
-        
-    def Set(self,key,val):
+
+    def Set(self, key, val):
         if self.current_item is None:
             return
-        if key in ('name','class','role','type','title'):
+        if key in ("name", "class", "role", "type", "title"):
             # we don't want to create these if the value is blank
             # since that would force a match to a blank value rather
             # than not caring
             if self.app.hasAttribute(key):
                 self.app.removeAttribute(key)
-            if val!='':
-                if val=="''" or val=='""':
-                    val=''
-                self.app.setAttribute(key,val)
-        elif key in ('x','y','monitor'):
-            val=val or 'default'
-            t=self.app.getElementsByTagName('position')
-            if len(t)==0:
-                if key!='x' or val=='default':
+            if val != "":
+                if val == "''" or val == '""':
+                    val = ""
+                self.app.setAttribute(key, val)
+        elif key in ("x", "y", "monitor"):
+            val = val or "default"
+            t = self.app.getElementsByTagName("position")
+            if len(t) == 0:
+                if key != "x" or val == "default":
                     return
-                el=self.dom.createElement('position')
+                el = self.dom.createElement("position")
                 self.app.appendChild(el)
             else:
-                el=t[0]
-            self._set_one(key,val,parent=el)
-        elif key=='force':
-            force=(val and 'yes') or 'no'
-            t=self.app.getElementsByTagName('position')
+                el = t[0]
+            self._set_one(key, val, parent=el)
+        elif key == "force":
+            force = (val and "yes") or "no"
+            t = self.app.getElementsByTagName("position")
             if len(t):
-                t[0].setAttribute('force',force)
+                t[0].setAttribute("force", force)
         else:
-            if key=='maximized' and val=='both':
-                val='yes'
-            if val=='na' or val=='':
-                val='default'
-            self._set_one(key,val)
-        
-    def Move(self,fromp,to):
-        old=self.parent.removeChild(self.apps[fromp])
-        self.parent.insertBefore(old,self.apps[to])
-        self.current_item=to
-        self.apps=self.parent.getElementsByTagName('application')
-        
-    def SetCurrent(self,index):
-        self.current_item=index
+            if key == "maximized" and val == "both":
+                val = "yes"
+            if val == "na" or val == "":
+                val = "default"
+            self._set_one(key, val)
+
+    def Move(self, fromp, to):
+        old = self.parent.removeChild(self.apps[fromp])
+        self.parent.insertBefore(old, self.apps[to])
+        self.current_item = to
+        self.apps = self.parent.getElementsByTagName("application")
+
+    def SetCurrent(self, index):
+        self.current_item = index
         if index is not None:
-            self.app=self.apps[index]
-        
+            self.app = self.apps[index]
+
     def Save(self):
         try:
-            f=open(self.path,'w')
+            f = open(self.path, "w")
         except IOError as ex:
-            wx.MessageBox('Cannot save '+self.path+': '+str(ex),"OBApps3",wx.OK|wx.ICON_ERROR)
+            wx.MessageBox("Cannot save " + self.path + ": " + str(ex), "OBApps3", wx.OK | wx.ICON_ERROR)
             return
         self.dom.writexml(f)
         f.close()
-        
-    def _get_one(self,key,parent=None):
-        val=''
+
+    def _get_one(self, key, parent=None):
+        val = ""
         if parent is None:
-            parent=self.app
-        t=parent.getElementsByTagName(key)
+            parent = self.app
+        t = parent.getElementsByTagName(key)
         if len(t):
             for n in t[0].childNodes:
-                if n.nodeType==Node.TEXT_NODE:
-                    val=n.nodeValue.strip()
+                if n.nodeType == Node.TEXT_NODE:
+                    val = n.nodeValue.strip()
                     break
         return val
-        
-    def _set_one(self,key,val,parent=None):
+
+    def _set_one(self, key, val, parent=None):
         if parent is None:
-            parent=self.app
-        t=parent.getElementsByTagName(key)
-        if len(t)==0:
-            if val=='default':
+            parent = self.app
+        t = parent.getElementsByTagName(key)
+        if len(t) == 0:
+            if val == "default":
                 return
-            el=self.dom.createElement(key)
+            el = self.dom.createElement(key)
             parent.appendChild(el)
             el.appendChild(self.dom.createTextNode(val))
         else:
             for n in t[0].childNodes:
-                if n.nodeType==Node.TEXT_NODE:
-                    n.nodeValue=val
-        
+                if n.nodeType == Node.TEXT_NODE:
+                    n.nodeValue = val
+
+
 class WLFrame(wx.Frame):
-    def __init__(self,*args,**kwargs):
-        wx.Frame.__init__(self,*args,**kwargs)
-        vbox=wx.BoxSizer(wx.VERTICAL)
-        hbox=wx.BoxSizer(wx.HORIZONTAL)
-        appsel=OBappsel(self,-1,style=wx.BORDER_RAISED,showtitle=False)
-        hbox.Add(appsel,1,wx.EXPAND)
-        panel=SettingsPanel(self,-1)
-        hbox.Add(panel,0,wx.EXPAND)
-        vbox.Add(hbox,1,wx.EXPAND)
-        vbox.Add(wx.StaticLine(self,-1,style=wx.HORIZONTAL),0,wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,5)
-        hbox=wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(wx.Button(self,wx.ID_ABOUT,''),0,wx.ALIGN_LEFT)
-        hbox1=wx.BoxSizer(wx.HORIZONTAL)
+    def __init__(self, *args, **kwargs):
+        wx.Frame.__init__(self, *args, **kwargs)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        appsel = OBappsel(self, -1, style=wx.BORDER_RAISED, showtitle=False)
+        hbox.Add(appsel, 1, wx.EXPAND)
+        panel = SettingsPanel(self, -1)
+        hbox.Add(panel, 0, wx.EXPAND)
+        vbox.Add(hbox, 1, wx.EXPAND)
+        vbox.Add(wx.StaticLine(self, -1, style=wx.HORIZONTAL), 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(wx.Button(self, wx.ID_ABOUT, ""), 0, wx.ALIGN_LEFT)
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
         hbox1.AddStretchSpacer()
-        hbox1.Add(wx.Button(self,wx.ID_APPLY,''),0,wx.ALIGN_RIGHT)
-        hbox1.Add(wx.Button(self,wx.ID_CLOSE,''),0,wx.ALIGN_RIGHT)
-        hbox.Add(hbox1,1)
-        vbox.Add(hbox,0,wx.EXPAND|wx.ALL,5)
+        hbox1.Add(wx.Button(self, wx.ID_APPLY, ""), 0, wx.ALIGN_RIGHT)
+        hbox1.Add(wx.Button(self, wx.ID_CLOSE, ""), 0, wx.ALIGN_RIGHT)
+        hbox.Add(hbox1, 1)
+        vbox.Add(hbox, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizerAndFit(vbox)
         appsel.SetNotify(panel.new_settings)
-        if len(sys.argv)==2:
-            path=sys.argv[1]
+        if len(sys.argv) == 2:
+            path = sys.argv[1]
         else:
-            path=obaxutils.get_ob_config_path()
+            path = obaxutils.get_ob_config_path()
         if path is None:
             self.Close()
             return
         try:
-            f=open(path,'r')
+            f = open(path, "r")
         except IOError as ex:
-            print(('Cannot load '+path+': '+str(ex)))
+            print(("Cannot load " + path + ": " + str(ex)))
             self.Close()
             return
-        self.model=OBAppsModel(path,f)
+        self.model = OBAppsModel(path, f)
         appsel.SetModel(self.model)
-        self.Bind(wx.EVT_BUTTON,self.onAbout,id=wx.ID_ABOUT)
-        self.Bind(wx.EVT_BUTTON,self.onApply,id=wx.ID_APPLY)
-        self.Bind(wx.EVT_BUTTON,self.onClose,id=wx.ID_CLOSE)
-        
-    def onAbout(self,evt):
-        info=wx.adv.AboutDialogInfo()
-        info.SetName('OBApps3')
+        self.Bind(wx.EVT_BUTTON, self.onAbout, id=wx.ID_ABOUT)
+        self.Bind(wx.EVT_BUTTON, self.onApply, id=wx.ID_APPLY)
+        self.Bind(wx.EVT_BUTTON, self.onClose, id=wx.ID_CLOSE)
+
+    def onAbout(self, evt):
+        info = wx.adv.AboutDialogInfo()
+        info.SetName("OBApps3")
         info.SetVersion(version)
-        info.SetDescription('Openbox Application Settings Editor (alpha)')
-        info.SetCopyright('(C) 2010 Eric Bohlman\n'
-                          '(C) 2020 gcurse (github.com/gCurse)')
-        info.AddDeveloper('Eric Bohlman <ericbohlman@gmail.com>')
+        info.SetDescription("Openbox Application Settings Editor (alpha)")
+        info.SetCopyright("(C) 2010 Eric Bohlman\n" "(C) 2020 gcurse (github.com/gCurse)")
+        info.AddDeveloper("Eric Bohlman <ericbohlman@gmail.com>")
         info.SetLicense(license)
-        info.WebSite=('https://github.com/gCurse/obapps3','OBApps3 home page')
+        info.WebSite = ("https://github.com/gCurse/obapps3", "OBApps3 home page")
         wx.adv.AboutBox(info)
-        
-    def onApply(self,evt):
+
+    def onApply(self, evt):
         self.model.Save()
         obaxutils.reconfigure_openbox()
-        
-    def onClose(self,evt):
+
+    def onClose(self, evt):
         self.Close()
-        
+
+
 def main():
-    app=wx.App()
-    frame=WLFrame(None,-1,'OBApps3')
+    app = wx.App()
+    frame = WLFrame(None, -1, "OBApps3")
     frame.Show()
     app.MainLoop()
-        
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     main()
