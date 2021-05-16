@@ -37,7 +37,9 @@ import os
 def get_ob_config_path():
     ds = display.Display()
     root = ds.screen().root
-    p = root.get_full_property(ds.intern_atom("_OB_CONFIG_FILE"), ds.intern_atom("UTF8_STRING"))
+    p = root.get_full_property(
+        ds.intern_atom("_OB_CONFIG_FILE"), ds.intern_atom("UTF8_STRING")
+    )
     if p is None:
         path = os.path.expandvars("$HOME/.config/openbox/rc.xml")
     else:
@@ -70,9 +72,14 @@ def reconfigure_openbox():
     ds = display.Display()
     root = ds.screen().root
     evt = Xlib.protocol.event.ClientMessage(
-        display=ds, window=root, client_type=ds.intern_atom("_OB_CONTROL"), data=(32, (1, 0, 0, 0, 0))
+        display=ds,
+        window=root,
+        client_type=ds.intern_atom("_OB_CONTROL"),
+        data=(32, (1, 0, 0, 0, 0)),
     )
-    ds.send_event(root, evt, event_mask=X.SubstructureNotifyMask | X.SubstructureRedirectMask)
+    ds.send_event(
+        root, evt, event_mask=X.SubstructureNotifyMask | X.SubstructureRedirectMask
+    )
     ds.flush()
 
 
@@ -80,7 +87,10 @@ def get_window_info(proplist):
     def find_client(win):
         if not hasattr(win, "get_full_property"):
             return
-        if win.get_full_property(ds.intern_atom("_NET_WM_STATE"), Xatom.STRING) is not None:
+        if (
+            win.get_full_property(ds.intern_atom("_NET_WM_STATE"), Xatom.STRING)
+            is not None
+        ):
             return win
         else:
             for w in win.query_tree().children:
@@ -95,7 +105,9 @@ def get_window_info(proplist):
     if win is not None:
         info = []
         for prop in proplist:
-            v = win.get_full_property(ds.intern_atom(prop), ds.intern_atom("UTF8_STRING")).value
+            v = win.get_full_property(
+                ds.intern_atom(prop), ds.intern_atom("UTF8_STRING")
+            ).value
             if v is None:
                 v = ""
             info.append(v)
