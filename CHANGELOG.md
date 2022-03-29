@@ -1,3 +1,6 @@
+#### 0.2.5 (2022-03-29):
+* Added "_OB_APP_TITLE" property
+
 #### 0.2.4 (2021-05-16):
 * Fixes #3: OBApps crashes on start with wxPython v4.1.1
 

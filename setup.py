@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="obapps3",
-    version="0.2.4",
+    version="0.2.5",
     description="Openbox Applications Editor",
     url="https://github.com/gCurse/obapps3",
     license="MIT",

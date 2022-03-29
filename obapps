@@ -3,7 +3,9 @@
 #  obapps
 #
 #  Openbox Application Settings Editor
-license = """
+License = """
+MIT License
+
 Copyright (c) 2010 Eric Bohlman
 Copyright (c) 2020 gcurse (github.com/gCurse)
 
@@ -28,15 +30,17 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
-version = "0.2.4"
+version = "0.2.5"
 
-import obaxutils
-import wx
-import wx.adv
-import wx.lib.mixins.listctrl as mix
 import sys
 from xml.dom.minidom import parse
 from xml.dom import Node
+
+import wx
+import wx.adv
+import wx.lib.mixins.listctrl as mix
+
+import obaxutils
 
 
 class OBappsel(wx.Panel):
@@ -50,19 +54,23 @@ class OBappsel(wx.Panel):
         self.model = None
         self.notify = None
         self.inhibit_onselected = False
-        self.modelkeys = ["name", "class", "role", "type"]
-        if self.showtitle:
-            self.modelkeys.append("title")
+        # self.modelkeys = ["name", "class", "group_name", "group_class", "role", "title", "type"]
+        self.modelkeys = ["name", "class", "role", "title", "type"]
+        # if self.showtitle:
+        #     self.modelkeys.append()
         wx.Panel.__init__(self, *args, **kwargs)
         vbox = wx.BoxSizer(wx.VERTICAL)
-        self.list = list = self.AWListCtrl(
+        self.proplist = self.AWListCtrl(
             self, -1, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_VRULES | wx.VSCROLL | wx.HSCROLL
         )
-        for col, text in enumerate((("Name", 150), ("Class", 150), ("Role", 150), ("Type", 80))):
-            list.InsertColumn(col, text[0], width=text[1])
-        if self.showtitle:
-            list.InsertColumn(4, "Title", 100)
-        vbox.Add(list, 1, wx.EXPAND)
+        # for col, text in enumerate((("Name", 150), ("Class", 150), ("Group name", 150), ("Group class", 150),
+        #                             ("Role", 150), ("Title", 150), ("Type", 80))):
+        for col, text in enumerate((("Name", 150), ("Class", 150), ("Role", 150), ("Title", 150), ("Type", 80))):
+            self.proplist.InsertColumn(col, text[0], width=text[1])
+        # if self.showtitle:
+        #     self.proplist.InsertColumn(4, "Title", width=150)
+
+        vbox.Add(self.proplist, 1, wx.EXPAND)
         hbox = self._makebuttons(
             (
                 (wx.ID_ADD, self.new),
@@ -74,8 +82,8 @@ class OBappsel(wx.Panel):
         )
         vbox.Add(hbox, 0, wx.ALIGN_CENTER)
         self.SetSizer(vbox)
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onSelected, list)
-        self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.onEdited, list)
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onSelected, self.proplist)
+        self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.onEdited, self.proplist)
 
     def SetNotify(self, func):
         self.notify = func
@@ -83,12 +91,12 @@ class OBappsel(wx.Panel):
     def SetModel(self, model):
         self.model = model
         self.inhibit_onselected = True
-        self.list.DeleteAllItems()
+        self.proplist.DeleteAllItems()
         for item in self.model.Items():
-            index = self.list.InsertItem(sys.maxsize, "")
+            index = self.proplist.InsertItem(sys.maxsize, "")
             self.model.SetCurrent(index)
             for col, val in enumerate(self.modelkeys):
-                self.list.SetItem(index, col, self.model.Get(val))
+                self.proplist.SetItem(index, col, self.model.Get(val))
         self.inhibit_onselected = False
         self.set_sel_and_focus(0)
 
@@ -96,11 +104,11 @@ class OBappsel(wx.Panel):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         for item in btnlist:
             label, binding = item[:2]
-            id = -1
+            b_id = -1
             if isinstance(label, int):
-                id = label
+                b_id = label
                 label = ""
-            btn = wx.Button(self, id, label, style=wx.BU_EXACTFIT & 0)
+            btn = wx.Button(self, b_id, label, style=wx.BU_EXACTFIT & 0)
             self.Bind(wx.EVT_BUTTON, binding, btn)
             if len(item) == 3:
                 btn.SetToolTip(item[2])
@@ -116,7 +124,7 @@ class OBappsel(wx.Panel):
         wx.CallAfter(self.set_model_values)
 
     def new(self, evt):
-        index = self.list.InsertItem(sys.maxsize, "")
+        index = self.proplist.InsertItem(sys.maxsize, "")
         self.model.Append()
         self.set_sel_and_focus(index)
         return index
@@ -131,16 +139,18 @@ class OBappsel(wx.Panel):
         self.SetCursor(wx.NullCursor)
         self.Unbind(wx.EVT_LEFT_DOWN)
         info = obaxutils.get_window_info(
-            ("_OB_APP_NAME", "_OB_APP_CLASS", "_OB_APP_ROLE", "_OB_APP_TYPE", "_NET_WM_NAME")
+            # ("_OB_APP_NAME", "_OB_APP_CLASS", "_OB_APP_GROUP_NAME", "_OB_APP_GROUP_CLASS", "_OB_APP_ROLE",
+            #  "_OB_APP_TITLE", "_OB_APP_TYPE")
+            ("_OB_APP_NAME", "_OB_APP_CLASS", "_OB_APP_ROLE", "_OB_APP_TITLE", "_OB_APP_TYPE")
         )
         if info is not None:
             sel = self.getsel()
             if sel is None:
                 sel = self.new(-1)
             for col, val in enumerate(info[:4]):
-                self.list.SetItem(sel, col, val)
+                self.proplist.SetItem(sel, col, val)
             if self.showtitle:
-                self.list.SetItem(sel, 4, info[4])
+                self.proplist.SetItem(sel, 4, info[4])
             self.set_model_values()
             self.set_sel_and_focus(sel)
 
@@ -153,23 +163,23 @@ class OBappsel(wx.Panel):
     def delete(self, evt):
         sel = self.getsel()
         if sel is not None:
-            self.list.DeleteItem(sel)
+            self.proplist.DeleteItem(sel)
             self.model.Delete(sel)
-            if sel >= self.list.GetItemCount():
+            if sel >= self.proplist.GetItemCount():
                 sel -= 1
             self.set_sel_and_focus(sel)
 
     def getsel(self):
-        for i in range(self.list.GetItemCount()):
-            if self.list.IsSelected(i):
+        for i in range(self.proplist.GetItemCount()):
+            if self.proplist.IsSelected(i):
                 return i
         return None
 
     def set_sel_and_focus(self, index):
         try:
-            self.list.Select(index, True)
-            self.list.Focus(index)
-            self.list.SetFocus()
+            self.proplist.Select(index, True)
+            self.proplist.Focus(index)
+            self.proplist.SetFocus()
             self.do_notify()
         except wx._core.wxAssertionError:
             print("No application entry in xml file")
@@ -178,19 +188,19 @@ class OBappsel(wx.Panel):
         sel = self.getsel()
         self.model.SetCurrent(sel)
         for i, name in enumerate(self.modelkeys):
-            self.model.Set(name, self.list.GetItem(sel, i).GetText())
+            self.model.Set(name, self.proplist.GetItem(sel, i).GetText())
         self.do_notify()
 
     def moveitem(self, incr):
         oldindex = index = self.getsel()
-        if index is not None and ((incr > 0 and index < self.list.GetItemCount() - 1) or (incr < 0 and index > 0)):
-            items = [self.list.GetItem(index, col) for col in range(self.list.GetColumnCount())]
+        if index is not None and ((incr > 0 and index < self.proplist.GetItemCount() - 1) or (incr < 0 < index)):
+            items = [self.proplist.GetItem(index, col) for col in range(self.proplist.GetColumnCount())]
             self.inhibit_onselected = True
-            self.list.DeleteItem(index)
-            index = self.list.InsertItem(index + incr, "")
+            self.proplist.DeleteItem(index)
+            index = self.proplist.InsertItem(index + incr, "")
             for item in items:
                 item.SetId(index)
-                self.list.SetItem(item)
+                self.proplist.SetItem(item)
             self.model.Move(oldindex, index)
             self.inhibit_onselected = False
         self.set_sel_and_focus(index)
@@ -199,12 +209,16 @@ class OBappsel(wx.Panel):
         if self.notify is not None:
             self.model.SetCurrent(self.getsel())
             self.notify(self.model)
+        for col in range(len(self.modelkeys)):
+            self.proplist.SetColumnWidth(col, wx.LIST_AUTOSIZE)
 
 
 class SettingsPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
         wx.Panel.__init__(self, *args, **kwargs)
+        self.inhibit_onchanged = None
         self.rbs = {}
+        self.settings = None
         vbox = wx.BoxSizer(wx.VERTICAL)
         self._makeradioboxes(
             vbox,
@@ -307,6 +321,7 @@ class SettingsPanel(wx.Panel):
 
 class OBAppsModel:
     def __init__(self, path, fileobj):
+        self.app = None
         self.path = path
         self.dom = parse(fileobj)
         t = self.dom.getElementsByTagName("applications")
@@ -415,12 +430,12 @@ class OBAppsModel:
 
     def Save(self):
         try:
-            f = open(self.path, "w")
+            rc_file = open(self.path, "w")
         except IOError as ex:
             wx.MessageBox("Cannot save " + self.path + ": " + str(ex), "OBApps3", wx.OK | wx.ICON_ERROR)
             return
-        self.dom.writexml(f)
-        f.close()
+        self.dom.writexml(rc_file)
+        rc_file.close()
 
     def _get_one(self, key, parent=None):
         val = ""
@@ -455,7 +470,7 @@ class WLFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwargs)
         vbox = wx.BoxSizer(wx.VERTICAL)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        appsel = OBappsel(self, -1, style=wx.BORDER_RAISED, showtitle=False)
+        appsel = OBappsel(self, -1, style=wx.BORDER_RAISED, showtitle=True)
         hbox.Add(appsel, 1, wx.EXPAND)
         panel = SettingsPanel(self, -1)
         hbox.Add(panel, 0, wx.EXPAND)
@@ -473,7 +488,7 @@ class WLFrame(wx.Frame):
         vbox.Add(hbox, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizerAndFit(vbox)
         appsel.SetNotify(panel.new_settings)
-        if len(sys.argv) == 2:
+        if len(sys.argv) >= 2:
             path = sys.argv[1]
         else:
             path = obaxutils.get_ob_config_path()
@@ -481,25 +496,27 @@ class WLFrame(wx.Frame):
             self.Close()
             return
         try:
-            f = open(path, "r")
+            rc_file = open(path, "r")
         except IOError as ex:
-            print(("Cannot load " + path + ": " + str(ex)))
+            print(f"Cannot load {path}: {str(ex)}")
+            rc_file.close()
             self.Close()
             return
-        self.model = OBAppsModel(path, f)
+        self.model = OBAppsModel(path, rc_file)
         appsel.SetModel(self.model)
         self.Bind(wx.EVT_BUTTON, self.onAbout, id=wx.ID_ABOUT)
         self.Bind(wx.EVT_BUTTON, self.onApply, id=wx.ID_APPLY)
         self.Bind(wx.EVT_BUTTON, self.onClose, id=wx.ID_CLOSE)
 
-    def onAbout(self, evt):
+    @staticmethod
+    def onAbout(evt):
         info = wx.adv.AboutDialogInfo()
         info.SetName("OBApps3")
         info.SetVersion(version)
-        info.SetDescription("Openbox Application Settings Editor (alpha)")
+        info.SetDescription("Openbox Application Settings Editor")
         info.SetCopyright("(C) 2010 Eric Bohlman\n" "(C) 2020 gcurse (github.com/gCurse)")
-        info.AddDeveloper("Eric Bohlman <ericbohlman@gmail.com>")
-        info.SetLicense(license)
+        info.AddDeveloper("gcurse <gcurse@web.de>")
+        info.SetLicense(License)
         info.WebSite = ("https://github.com/gCurse/obapps3", "OBApps3 home page")
         wx.adv.AboutBox(info)
 
@@ -514,6 +531,7 @@ class WLFrame(wx.Frame):
 def main():
     app = wx.App()
     frame = WLFrame(None, -1, "OBApps3")
+    # frame.SetIcon(wx.Icon("./openbox_filled_yrb.png"))
     frame.Show()
     app.MainLoop()
 
